@@ -2229,6 +2229,73 @@ async function handleIcon(options, url) {
     return await getDefaultIcon();
 }
 /**
+ * Scrapes the page HTML for the best favicon link tag and returns its resolved URL.
+ * Covers sites like Messenger where icon-service APIs return generic results.
+ */
+async function scrapePageFaviconUrl(url, downloadTimeout) {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), downloadTimeout);
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PakeCLI/1.0)' },
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok)
+            return null;
+        const html = await response.text();
+        const base = new URL(url);
+        // Priority order: apple-touch-icon > icon (largest size) > shortcut icon > favicon.ico
+        const candidates = [];
+        // Match all <link> tags with rel containing icon variants
+        const linkPattern = /<link[^>]+rel=["']([^"']*icon[^"']*)["'][^>]*>/gi;
+        let match;
+        while ((match = linkPattern.exec(html)) !== null) {
+            const tag = match[0];
+            const rel = match[1].toLowerCase();
+            const hrefMatch = /href=["']([^"']+)["']/i.exec(tag);
+            if (!hrefMatch)
+                continue;
+            const href = hrefMatch[1];
+            let priority = 0;
+            if (rel.includes('apple-touch-icon')) {
+                priority = 30;
+            }
+            else if (rel === 'icon' || rel === 'shortcut icon') {
+                priority = 20;
+            }
+            else {
+                priority = 10;
+            }
+            // Prefer larger declared sizes
+            const sizesMatch = /sizes=["']([^"']+)["']/i.exec(tag);
+            if (sizesMatch) {
+                const dim = parseInt(sizesMatch[1].split('x')[0], 10);
+                if (!isNaN(dim))
+                    priority += Math.min(dim / 10, 20);
+            }
+            candidates.push({ href, priority });
+        }
+        if (candidates.length === 0)
+            return null;
+        // Sort descending by priority
+        candidates.sort((a, b) => b.priority - a.priority);
+        for (const { href } of candidates) {
+            try {
+                const resolved = new URL(href, base).toString();
+                return resolved;
+            }
+            catch {
+                // malformed href — skip
+            }
+        }
+        return null;
+    }
+    catch {
+        return null;
+    }
+}
+/**
  * Generates icon service URLs for a domain
  */
 function generateIconServiceUrls(domain) {
@@ -2335,6 +2402,16 @@ async function tryGetFavicon(url, appName) {
         const downloadTimeout = isCI
             ? ICON_CONFIG.downloadTimeout.ci
             : ICON_CONFIG.downloadTimeout.default;
+        // First try scraping the page HTML for <link rel="icon"> — this catches
+        // sites like Messenger where external icon APIs return generic results.
+        const pageIconUrl = await scrapePageFaviconUrl(url, downloadTimeout);
+        if (pageIconUrl) {
+            const resolvedPath = await resolveIconFromUrl(pageIconUrl, appName, downloadTimeout);
+            if (resolvedPath) {
+                spinner.succeed(chalk.green('Icon scraped from page HTML and converted successfully!'));
+                return resolvedPath;
+            }
+        }
         const sourcePriority = getIconSourcePriority(url, appName);
         for (const source of sourcePriority) {
             const resolvedIconPath = await tryResolveIconSource(source, domain, appName, downloadTimeout);

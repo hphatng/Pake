@@ -33,6 +33,11 @@ inputs:
     required: false
     default: "780"
 
+  responsive:
+    description: "Responsive UI (start maximized, resizable window)"
+    required: false
+    default: "true"
+
   debug:
     description: "Enable debug mode"
     required: false
@@ -80,6 +85,10 @@ runs:
 
         ARGS+=("--width" "${{ inputs.width }}")
         ARGS+=("--height" "${{ inputs.height }}")
+
+        if [ "${{ inputs.responsive }}" == "true" ]; then
+          ARGS+=("--maximize" "--resizable")
+        fi
 
         if [ "${{ inputs.debug }}" == "true" ]; then
           ARGS+=("--debug")

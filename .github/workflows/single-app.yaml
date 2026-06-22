@@ -42,6 +42,10 @@ on:
         description: "Window height"
         required: false
         default: 780
+      responsive:
+        description: "Responsive UI (start maximized, resizable window)"
+        required: false
+        default: true
   workflow_call:
     inputs:
       name:
@@ -88,6 +92,11 @@ on:
         type: number
         required: false
         default: 780
+      responsive:
+        description: "Responsive UI (start maximized, resizable window)"
+        type: boolean
+        required: false
+        default: true
     secrets:
       PAKE_SIGNING_IDENTITY:
         required: false
@@ -221,6 +230,10 @@ jobs:
           ARGS+=("--width" "${{ inputs.width }}")
           ARGS+=("--height" "${{ inputs.height }}")
 
+          if [ "${{ inputs.responsive }}" = "true" ]; then
+            ARGS+=("--maximize" "--resizable")
+          fi
+
           # Build once with multiple targets (faster than separate builds)
           node dist/cli.js "${ARGS[@]}" --targets deb,appimage
 
@@ -274,6 +287,10 @@ jobs:
 
           ARGS+=("--width" "${{ inputs.width }}")
           ARGS+=("--height" "${{ inputs.height }}")
+
+          if [ "${{ inputs.responsive }}" = "true" ]; then
+            ARGS+=("--maximize" "--resizable")
+          fi
 
           node dist/cli.js "${ARGS[@]}" --targets universal --multi-arch
 
@@ -350,6 +367,10 @@ jobs:
 
           $args += "--width", "${{ inputs.width }}"
           $args += "--height", "${{ inputs.height }}"
+
+          if ("${{ inputs.responsive }}" -eq "true") {
+            $args += "--maximize", "--resizable"
+          }
 
           $args += "--targets", "x64"
 

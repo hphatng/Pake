@@ -212,12 +212,19 @@ fn build_window(
         }
     });
 
+    // On Windows, defer maximize to post-build so the WM_GETMINMAXINFO flow
+    // correctly respects auto-hide taskbar bounds (Q2 fix).
+    #[cfg(target_os = "windows")]
+    let maximize_at_build = false;
+    #[cfg(not(target_os = "windows"))]
+    let maximize_at_build = window_config.maximize;
+
     let mut window_builder = WebviewWindowBuilder::new(app, label, url)
         .title(effective_title)
         .visible(visible)
         .user_agent(user_agent)
         .resizable(window_config.resizable)
-        .maximized(window_config.maximize);
+        .maximized(maximize_at_build);
 
     // Tauri's inner_size() already accepts logical pixels, so pass the
     // configured dimensions directly on every platform. A previous Windows
@@ -302,7 +309,8 @@ fn build_window(
          --enable-gpu-rasterization \
          --enable-zero-copy \
          --ignore-gpu-blocklist \
-         --enable-features=CanvasOopRasterization",
+         --enable-features=CanvasOopRasterization,DirectComposition,DrDc \
+         --renderer-process-limit=1",
     );
 
     #[cfg(target_os = "linux")]
@@ -490,7 +498,19 @@ fn build_window(
 
     window_builder = window_builder.on_navigation(|_| true);
 
-    window_builder.build()
+    let window = window_builder.build()?;
+
+    // Windows: post-build maximize so WM_GETMINMAXINFO correctly excludes the
+    // auto-hide taskbar area. Builder-time .maximized(true) sets WS_MAXIMIZE
+    // before the shell processes WM_GETMINMAXINFO, causing WebView2 to cover
+    // the taskbar hot-zone. Calling maximize() after build triggers the proper
+    // Win32 maximize flow that respects auto-hide taskbar bounds.
+    #[cfg(target_os = "windows")]
+    if window_config.maximize {
+        let _ = window.maximize();
+    }
+
+    Ok(window)
 }
 
 #[cfg(all(test, target_os = "windows"))]
