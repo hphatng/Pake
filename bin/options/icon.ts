@@ -428,8 +428,7 @@ async function scrapePageFaviconUrl(
     const candidates: Array<{ href: string; priority: number }> = [];
 
     // Match all <link> tags with rel containing icon variants
-    const linkPattern =
-      /<link[^>]+rel=["']([^"']*icon[^"']*)["'][^>]*>/gi;
+    const linkPattern = /<link[^>]+rel=["']([^"']*icon[^"']*)["'][^>]*>/gi;
     let match: RegExpExecArray | null;
     while ((match = linkPattern.exec(html)) !== null) {
       const tag = match[0];
@@ -646,7 +645,9 @@ async function tryGetFavicon(
       );
       if (resolvedPath) {
         spinner.succeed(
-          chalk.green('Icon scraped from page HTML and converted successfully!'),
+          chalk.green(
+            'Icon scraped from page HTML and converted successfully!',
+          ),
         );
         return resolvedPath;
       }
