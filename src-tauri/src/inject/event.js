@@ -315,7 +315,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  if (!document.getElementById("pake-top-dom")) {
+  // The pake-top-dom drag region is only needed on macOS where the title bar
+  // is hidden (overlay style) and a transparent drag area is required at the
+  // top of the page. On Windows and Linux the native title bar provides window
+  // dragging, and the overlay element would block the auto-hide taskbar and
+  // interfere with the page content.
+  const isMacPlatform = /macintosh|mac os x/i.test(navigator.userAgent);
+  if (isMacPlatform && !document.getElementById("pake-top-dom")) {
     const topDom = document.createElement("div");
     topDom.id = "pake-top-dom";
     document.body.appendChild(topDom);
@@ -323,22 +329,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const domEl = document.getElementById("pake-top-dom");
 
-  domEl.addEventListener("touchstart", () => {
-    appWindow.startDragging();
-  });
-
-  domEl.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    if (e.buttons === 1 && e.detail !== 2) {
+  if (domEl) {
+    domEl.addEventListener("touchstart", () => {
       appWindow.startDragging();
-    }
-  });
-
-  domEl.addEventListener("dblclick", () => {
-    appWindow.isFullscreen().then((fullscreen) => {
-      appWindow.setFullscreen(!fullscreen);
     });
-  });
+
+    domEl.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      if (e.buttons === 1 && e.detail !== 2) {
+        appWindow.startDragging();
+      }
+    });
+
+    domEl.addEventListener("dblclick", () => {
+      appWindow.isFullscreen().then((fullscreen) => {
+        appWindow.setFullscreen(!fullscreen);
+      });
+    });
+  }
 
   if (window["pakeConfig"]?.disabled_web_shortcuts !== true) {
     document.addEventListener("keyup", (event) => {

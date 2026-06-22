@@ -219,22 +219,17 @@ fn build_window(
         .resizable(window_config.resizable)
         .maximized(window_config.maximize);
 
+    // Tauri's inner_size() already accepts logical pixels, so pass the
+    // configured dimensions directly on every platform. A previous Windows
+    // code-path divided by the monitor scale_factor, but that made the window
+    // too small on high-DPI displays (e.g. 150% scaling).
+    window_builder = window_builder.inner_size(window_config.width, window_config.height);
+
+    // Ensure Windows always has native decorations (minimize / maximize / close)
+    // regardless of the hide_title_bar option, which only applies to macOS.
     #[cfg(target_os = "windows")]
     {
-        let scale_factor = app
-            .primary_monitor()
-            .ok()
-            .flatten()
-            .map(|m| m.scale_factor())
-            .unwrap_or(1.0);
-        let logical_width = window_config.width / scale_factor;
-        let logical_height = window_config.height / scale_factor;
-        window_builder = window_builder.inner_size(logical_width, logical_height);
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        window_builder = window_builder.inner_size(window_config.width, window_config.height);
+        window_builder = window_builder.decorations(true);
     }
 
     window_builder = window_builder
@@ -301,7 +296,14 @@ fn build_window(
         .initialization_script(include_str!("../inject/custom.js"));
 
     #[cfg(target_os = "windows")]
-    let mut windows_browser_args = String::from("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --disable-blink-features=AutomationControlled");
+    let mut windows_browser_args = String::from(
+        "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection \
+         --disable-blink-features=AutomationControlled \
+         --enable-gpu-rasterization \
+         --enable-zero-copy \
+         --ignore-gpu-blocklist \
+         --enable-features=CanvasOopRasterization",
+    );
 
     #[cfg(target_os = "linux")]
     let mut linux_browser_args = String::from("--disable-blink-features=AutomationControlled");
