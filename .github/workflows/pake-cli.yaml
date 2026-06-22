@@ -62,6 +62,11 @@ on:
         description: "Package formats (comma-separated: deb,appimage,rpm,zst)"
         required: false
         default: "deb"
+      responsive:
+        description: "Responsive UI (start maximized, resizable window)"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -142,6 +147,10 @@ jobs:
             ARGS+=("--hide-title-bar")
           fi
 
+          if [ "${{ inputs.responsive }}" == "true" ]; then
+            ARGS+=("--maximize" "--resizable")
+          fi
+
           if [ "${{ inputs.multi_arch }}" == "true" ]; then
             ARGS+=("--multi-arch")
           fi
@@ -190,6 +199,10 @@ jobs:
 
           if ("${{ inputs.hide_title_bar }}" -eq "true") {
             $args += "--hide-title-bar"
+          }
+
+          if ("${{ inputs.responsive }}" -eq "true") {
+            $args += "--maximize", "--resizable"
           }
 
           Write-Host "Running: node dist/cli.js $($args -join ' ')"
