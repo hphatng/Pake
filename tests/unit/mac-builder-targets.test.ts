@@ -1,5 +1,5 @@
 import path from 'path';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 
 // tauriConfig.ts reads pake.json at module load, keyed off npmDirectory.
 // Point it at the repo root so the import chain resolves under vitest.
@@ -15,6 +15,21 @@ const makeBuilder = (targets?: string) =>
   new MacBuilder({ name: 'Demo', targets } as PakeAppOptions);
 
 describe('MacBuilder target selection', () => {
+  let originalPakeCreateApp: string | undefined;
+
+  beforeAll(() => {
+    originalPakeCreateApp = process.env.PAKE_CREATE_APP;
+    delete process.env.PAKE_CREATE_APP;
+  });
+
+  afterAll(() => {
+    if (originalPakeCreateApp !== undefined) {
+      process.env.PAKE_CREATE_APP = originalPakeCreateApp;
+    } else {
+      delete process.env.PAKE_CREATE_APP;
+    }
+  });
+
   it('builds an app bundle when --targets app is requested', () => {
     // The app format ships a bare `.app`, so the file name carries no
     // version/arch suffix. This proves `--targets app` is honoured rather
