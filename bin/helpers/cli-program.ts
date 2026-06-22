@@ -103,6 +103,11 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp(),
     )
     .addOption(
+      new Option('--resizable', 'Whether the window is resizable')
+        .default(DEFAULT.resizable)
+        .hideHelp(),
+    )
+    .addOption(
       new Option(
         '--dark-mode',
         'Force app to use dark mode (supports macOS, Windows, and Linux)',

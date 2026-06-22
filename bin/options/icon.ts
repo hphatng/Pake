@@ -441,7 +441,13 @@ async function scrapePageFaviconUrl(
       if (rel.includes('apple-touch-icon')) {
         priority = 30;
       } else if (rel === 'icon' || rel === 'shortcut icon') {
-        priority = 20;
+        // De-prioritize .ico files since sharp cannot parse BMP-based ICO frames,
+        // which prevents us from upgrading them to multi-resolution Windows icons.
+        if (href.toLowerCase().endsWith('.ico')) {
+          priority = 5;
+        } else {
+          priority = 20;
+        }
       } else {
         priority = 10;
       }

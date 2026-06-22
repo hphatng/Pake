@@ -2262,7 +2262,14 @@ async function scrapePageFaviconUrl(url, downloadTimeout) {
                 priority = 30;
             }
             else if (rel === 'icon' || rel === 'shortcut icon') {
-                priority = 20;
+                // De-prioritize .ico files since sharp cannot parse BMP-based ICO frames,
+                // which prevents us from upgrading them to multi-resolution Windows icons.
+                if (href.toLowerCase().endsWith('.ico')) {
+                    priority = 5;
+                }
+                else {
+                    priority = 20;
+                }
             }
             else {
                 priority = 10;
@@ -2634,6 +2641,7 @@ const DEFAULT_PAKE_OPTIONS = {
     width: 1200,
     fullscreen: false,
     maximize: false,
+    resizable: true,
     hideTitleBar: false,
     alwaysOnTop: false,
     appVersion: '1.0.0',
@@ -2763,6 +2771,9 @@ ${green('|_|   \\__,_|_|\\_\\___|  can turn any webpage into a desktop app with 
         .hideHelp())
         .addOption(new Option('--maximize', 'Start window maximized')
         .default(DEFAULT_PAKE_OPTIONS.maximize)
+        .hideHelp())
+        .addOption(new Option('--resizable', 'Whether the window is resizable')
+        .default(DEFAULT_PAKE_OPTIONS.resizable)
         .hideHelp())
         .addOption(new Option('--dark-mode', 'Force app to use dark mode (supports macOS, Windows, and Linux)')
         .default(DEFAULT_PAKE_OPTIONS.darkMode)
